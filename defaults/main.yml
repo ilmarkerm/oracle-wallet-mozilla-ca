@@ -1,7 +1,22 @@
-source_ca_certs: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+# Where can we find orapki
+oracle_home: /u01/app/oracle/product/19-db-001
+
+# Where to place the finished wallet
 target_wallet: /u03/dw/oracle_wallets/mozilla
+
+# Where can we build the certificate (temporary location)
 tmp_wallet: /tmp/wallet
 tmp_cert_extract: /tmp/wallet.tmp
+
+# This is just for locking, if you don't need locking just remove/ignore them
+# Locking is done using filesystem, good if you have cluster with a shared filesystem (like NFS), so only one node will do the wallet building and place it it a shared filesystem
 cawalletlock: /u03/dw/oracle_wallets/.mozilla.lock
 cawalletlocktmp: /u03/dw/oracle_wallets/.mozilla.lock.{{ inventory_hostname_short }}
+
+# Where can we find the CA certificate bundle
+# It is installed using package ca-certificates (in OEL, RHEL, Centos)
+source_ca_certs: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+
+
+# Internal variable for locking
 cawalletlockgranted: no
