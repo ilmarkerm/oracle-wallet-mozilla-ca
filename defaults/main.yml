@@ -1,0 +1,7 @@
+source_ca_certs: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+target_wallet: /u03/dw/oracle_wallets/mozilla
+tmp_wallet: /tmp/wallet
+tmp_cert_extract: /tmp/wallet.tmp
+cawalletlock: /u03/dw/oracle_wallets/.mozilla.lock
+cawalletlocktmp: /u03/dw/oracle_wallets/.mozilla.lock.{{ inventory_hostname_short }}
+cawalletlockgranted: no

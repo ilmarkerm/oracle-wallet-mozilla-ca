@@ -1,0 +1,68 @@
+- name: Make sure ca-certificates package is the latest
+  yum:
+    name: ca-certificates
+    state: latest
+
+- block:
+  - name: Try getting a lock to write mozilla wallet file
+    shell: "touch {{ cawalletlocktmp }} && ln {{ cawalletlocktmp }} {{ cawalletlock }}"
+    register: getlock
+    failed_when: no
+  - set_fact:
+      cawalletlockgranted: yes
+    when: getlock.rc == 0
+  always:
+    - name: Remove temporary lock
+      file:
+        name: "{{ cawalletlocktmp }}"
+        state: absent
+    - name: Remove global lock
+      file:
+        name: "{{ cawalletlock }}"
+        state: absent
+      when: getlock.rc == 0
+
+
+
+- block:
+
+  - name: Create temporary directories
+    file:
+      path: "{{ item }}"
+      state: directory
+    with_items:
+      - "{{ tmp_wallet }}"
+      - "{{ tmp_cert_extract }}"
+
+  - name: Extract certificates
+    shell: rm -f * && csplit /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem '/-----BEGIN CERTIFICATE-----/' '{*}' && rm xx00
+    args:
+      chdir: "{{ tmp_cert_extract }}"
+
+  - name: Create new wallet
+    shell: "{{ tg_home }}/bin/orapki wallet create -wallet {{ tmp_wallet }} -pwd {{ wallet_password }}"
+    environment:
+      ORACLE_HOME: "{{ tg_home }}"
+
+  - name: Import all trusted certificates
+    shell: find . -name 'xx*' -type f -exec {{ tg_home }}/bin/orapki wallet add -wallet {{ tmp_wallet }} -trusted_cert -cert {} -pwd {{ wallet_password }} \;
+    args:
+      chdir: "{{ tmp_cert_extract }}"    
+    environment:
+      ORACLE_HOME: "{{ tg_home }}"
+
+  become: yes
+  become_user: "{{ tg_owner }}"
+  when: cawalletlockgranted
+
+- name: Replace wallet
+  shell: mkdir -p {{ target_wallet }} && rm -f {{ target_wallet }}/ewallet* && mv {{ tmp_wallet }}/ewallet.p12 {{ target_wallet }}/ && chown oracledw:oinstall -R {{ target_wallet }} && chmod 775 {{ target_wallet }} &&  chmod 664 {{ target_wallet }}/ewallet*
+  when: cawalletlockgranted
+
+- name: Clean temporary directories
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "{{ tmp_wallet }}"
+    - "{{ tmp_cert_extract }}"
